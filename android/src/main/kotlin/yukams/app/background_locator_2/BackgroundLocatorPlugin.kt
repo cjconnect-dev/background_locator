@@ -3,6 +3,7 @@ package yukams.app.background_locator_2
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -45,6 +46,8 @@ class BackgroundLocatorPlugin
         private fun registerLocator(context: Context,
                                     args: Map<Any, Any>,
                                     result: Result?) {
+            _isServiceRunning(context)
+
             if (IsolateHolderService.isServiceRunning) {
                 // The service is running already
                 Log.d("BackgroundLocatorPlugin", "Locator service is already running")
@@ -149,6 +152,7 @@ class BackgroundLocatorPlugin
 
         @JvmStatic
         private fun unRegisterPlugin(context: Context, result: Result?) {
+            _isServiceRunning(context)
             if (!IsolateHolderService.isServiceRunning) {
                 // The service is not running
                 Log.d("BackgroundLocatorPlugin", "Locator service is not running, nothing to stop")
@@ -158,6 +162,7 @@ class BackgroundLocatorPlugin
 
             stopIsolateService(context)
 
+
             // We need to know when the service detached exactly, there is some delay between stopping a
             // service and it's detachment
             // HELP WANTED: I couldn't find a better way to handle this, so any help or suggestion would be appreciated
@@ -165,8 +170,19 @@ class BackgroundLocatorPlugin
         }
 
         @JvmStatic
-        private fun isServiceRunning(result: Result?) {
+        private fun isServiceRunning(context:Context?,result: Result?) {
+            _isServiceRunning(context)
             result?.success(IsolateHolderService.isServiceRunning)
+        }
+
+        private fun _isServiceRunning(context:Context?){
+            val activityManager = context?.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager?
+            val runningServices = activityManager?.getRunningServices(Int.MAX_VALUE)
+            val isServiceRunning = runningServices?.any {
+                 it.service.className.contains("${IsolateHolderService::class.simpleName}")
+            } ?: false
+
+            IsolateHolderService.isServiceRunning = isServiceRunning
         }
 
         @JvmStatic
@@ -244,9 +260,11 @@ class BackgroundLocatorPlugin
             Keys.METHOD_PLUGIN_UN_REGISTER_LOCATION_UPDATE -> {
                 unRegisterPlugin(context!!, result)
             }
-            Keys.METHOD_PLUGIN_IS_REGISTER_LOCATION_UPDATE -> isServiceRunning(result)
-            Keys.METHOD_PLUGIN_IS_SERVICE_RUNNING -> isServiceRunning(result)
+            Keys.METHOD_PLUGIN_IS_REGISTER_LOCATION_UPDATE -> isServiceRunning(context,result)
+            Keys.METHOD_PLUGIN_IS_SERVICE_RUNNING -> isServiceRunning(context,result)
             Keys.METHOD_PLUGIN_UPDATE_NOTIFICATION -> {
+                _isServiceRunning(context)
+
                 if (!IsolateHolderService.isServiceRunning) {
                     return
                 }
