@@ -25,8 +25,8 @@ class _MyAppState extends State<MyApp> {
   ReceivePort port = ReceivePort();
 
   String logStr = '';
-  bool isRunning;
-  LocationDto lastLocation;
+  late bool isRunning;
+  late LocationDto? lastLocation;
 
   @override
   void initState() {
@@ -58,8 +58,8 @@ class _MyAppState extends State<MyApp> {
   Future<void> updateUI(dynamic data) async {
     final log = await FileManager.readLogFile();
 
-    LocationDto locationDto = (data != null) ? LocationDto.fromJson(data) : null;
-    await _updateNotificationText(locationDto);
+    final locationDto = (data != null) ? LocationDto.fromJson(data) : null;
+    await _updateNotificationText(locationDto ?? (throw Exception()));
 
     setState(() {
       if (data != null) {
@@ -75,9 +75,9 @@ class _MyAppState extends State<MyApp> {
     }
 
     await BackgroundLocator.updateNotificationText(
-        title: "new location received",
-        msg: "${DateTime.now()}",
-        bigMsg: "${data.latitude}, ${data.longitude}");
+        title: 'new location received',
+        msg: '${DateTime.now()}',
+        bigMsg: '${data.latitude}, ${data.longitude}');
   }
 
   Future<void> initPlatformState() async {
@@ -124,7 +124,7 @@ class _MyAppState extends State<MyApp> {
         },
       ),
     );
-    String msgStatus = "-";
+    String msgStatus = '-';
     if (isRunning != null) {
       if (isRunning) {
         msgStatus = 'Is running';
@@ -132,7 +132,7 @@ class _MyAppState extends State<MyApp> {
         msgStatus = 'Is not running';
       }
     }
-    final status = Text("Status: $msgStatus");
+    final status = Text('Status: $msgStatus');
 
     final log = Text(
       logStr,
